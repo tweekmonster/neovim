@@ -1,67 +1,34 @@
-" Vim syntax file
-" Language:	Man page
-" Maintainer:	SungHyun Nam <goweol@gmail.com>
-" Previous Maintainer:	Gautam H. Mudunuri <gmudunur@informatica.com>
-" Version Info:
-" Last Change:	2015 Nov 24
-
-" Additional highlighting by Johannes Tanzler <johannes.tanzler@aon.at>:
-"	* manSubHeading
-"	* manSynopsis (only for sections 2 and 3)
-
-" For version 5.x: Clear all syntax items
-" For version 6.x: Quit when a syntax file was already loaded
-if version < 600
-  syntax clear
-elseif exists("b:current_syntax")
+if exists("b:current_syntax")
   finish
 endif
 
-" Get the CTRL-H syntax to handle backspaced text
-if version >= 600
-  runtime! syntax/ctrlh.vim
-else
-  source <sfile>:p:h/ctrlh.vim
-endif
+syntax case  ignore
+syntax match manReference       "\f\+(\%([0-8][a-z]\=\|n\))"
+syntax match manTitle           "^\%1l\S\+\%((\%([0-8][a-z]\=\|n\))\)\=.*$"
+syntax match manSubHeading      "^\s\{3\}\%(\S.*\)\=\S$"
+syntax match manOptionDesc      "^\s\+[+-][a-z0-9]\S*"
+syntax match manLongOptionDesc  "^\s\+--[a-z0-9]\S*"
+" prevent manSectionHeading from matching last line
+let s:l = line('$')
+execute 'syntax match manSectionHeading  "^\%(\%>1l\%<'.s:l.'l\)\%(\S.*\)\=\S$"'
 
-syn case ignore
-syn match  manReference       "\f\+([1-9][a-z]\=)"
-syn match  manTitle	      "^\f\+([0-9]\+[a-z]\=).*"
-syn match  manSectionHeading  "^[a-z][a-z -]*[a-z]$"
-syn match  manSubHeading      "^\s\{3\}[a-z][a-z -]*[a-z]$"
-syn match  manOptionDesc      "^\s*[+-][a-z0-9]\S*"
-syn match  manLongOptionDesc  "^\s*--[a-z0-9-]\S*"
-" syn match  manHistory		"^[a-z].*last change.*$"
+highlight default link manTitle          Title
+highlight default link manSectionHeading Statement
+highlight default link manOptionDesc     Constant
+highlight default link manLongOptionDesc Constant
+highlight default link manReference      PreProc
+highlight default link manSubHeading     Function
 
-if getline(1) =~ '^[a-zA-Z_]\+([23])'
-  syntax include @cCode <sfile>:p:h/c.vim
-  syn match manCFuncDefinition  display "\<\h\w*\>\s*("me=e-1 contained
-  syn region manSynopsis start="^SYNOPSIS"hs=s+8 end="^\u\+\s*$"me=e-12 keepend contains=manSectionHeading,@cCode,manCFuncDefinition
-endif
-
-
-" Define the default highlighting.
-" For version 5.7 and earlier: only when not done already
-" For version 5.8 and later: only when an item doesn't have highlighting yet
-if version >= 508 || !exists("did_man_syn_inits")
-  if version < 508
-    let did_man_syn_inits = 1
-    command -nargs=+ HiLink hi link <args>
-  else
-    command -nargs=+ HiLink hi def link <args>
-  endif
-
-  HiLink manTitle	    Title
-  HiLink manSectionHeading  Statement
-  HiLink manOptionDesc	    Constant
-  HiLink manLongOptionDesc  Constant
-  HiLink manReference	    PreProc
-  HiLink manSubHeading      Function
-  HiLink manCFuncDefinition Function
-
-  delcommand HiLink
+if getline(1) =~# '^\f\+([23])'
+  syntax include @cCode syntax/c.vim
+  " skip first heading
+  keepjumps call search('^\%(\S.*\)\=\S$')
+  " get second heading, aka the synopsis heading
+  let l = escape(getline(search('^\%(\S.*\)\=\S$', 'n')), '\')
+  keepjumps normal! gg
+  syntax match manCFuncDefinition display "\<\h\w*\>\s*("me=e-1 contained
+  execute 'syntax region manSynopsis start="\V\^'.l.'\$"hs=s+8 end="^\%(\S.*\)\=\S$"me=e-12 keepend contains=manSectionHeading,@cCode,manCFuncDefinition'
+  highlight default link manCFuncDefinition Function
 endif
 
 let b:current_syntax = "man"
-
-" vim:ts=8 sts=2 sw=2:
