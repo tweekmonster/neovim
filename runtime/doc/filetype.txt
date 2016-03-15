@@ -500,7 +500,7 @@ Options:
 		avoid that a Subject line with "Vim:" in it will cause an
 		error message.
 'textwidth'	is set to 72.  This is often recommended for e-mail.
-'formatoptions'  is set to break text lines and to repeat the comment leader
+'formatoptions'	is set to break text lines and to repeat the comment leader
 		in new lines, so that a leading ">" for quotes is repeated.
 		You can also format quoted text with |gq|.
 
@@ -512,37 +512,49 @@ Local mappings:
 
 MAN					*ft-man-plugin* *:Man* *man.vim*
 
-Displays a manual page in a nice way.  Also see the user manual
-|find-manpage|.
-
-To start using the ":Man" command before any manual page was loaded, source
-this script from your startup vimrc file: >
-
-	runtime ftplugin/man.vim
-
-Options:
-'iskeyword'	the '.' character is added to be able to use CTRL-] on the
-		manual page name.
+View manpages from the comfort of vim. Features include syntax highlighting,
+autocompletion, multilingual support, and manpage jumping.
+Also see |find-manpage|.
 
 Commands:
-Man {name}	Display the manual page for {name} in a window.
-Man {number} {name}
-		Display the manual page for {name} in a section {number}.
-
-Global mapping:
-<Leader>K	Displays the manual page for the word under the cursor.
+Man			Display the manual page for <cWORD> in a new tab.
+Man {name}		Display the manual page for {name} in a new tab.
+Man {sect} {name}	Same as above except specify the section.
+Man {name}({sect})	Alternate syntax to above.
 
 Local mappings:
-CTRL-]		Jump to the manual page for the word under the cursor.
-CTRL-T		Jump back to the previous manual page.
-q		Same as ":quit"
+=======
+CTRL-]			Jump to the manual page for the <cWORD> under the cursor.
+K			Same as CTRL-].
+CTRL-T			Jump back to the previous manual page.
+q			Close the window.
 
 To enable folding use this: >
-  	let g:ft_man_folding_enable = 1
+	let g:ft_man_folding_enable = 1
 If you do not like the default folding, use an autocommand to add your desired
 folding style instead.  For example: >
-        autocmd FileType man setlocal foldmethod=indent foldenable
+	autocmd FileType man setlocal foldmethod=indent foldenable
 
+Variables:
+g:man_find_window
+			If set, man will attempt to find the current man window
+			before opening a new one. A bang on the commands will
+			do the opposite of whatever this variable is set to.
+			Defaults to 1.
+g:man_synopsis
+			This only applies if you will be using languages other
+			than english.
+			In manpages of sections 2 and 3, there is sometimes some C
+			code under the heading SYNOPSIS. In english we can just match
+			SYNOPSIS and then can highlight all of the C code underneath.
+			However in other languages, SYNOPSIS is a different word, so how
+			are we to tell where the C code begins? This variable is a regex
+			that is used to match the SYNOPSIS heading.
+			Modify it for the language(s) you will be using.
+			Defaults to '\V\^SYNOPSIS\$'.
+g:no_man_maps
+			If set, no mappings are created in man buffers.
+			Defaults to 0.
 
 PDF							*ft-pdf-plugin*
 
