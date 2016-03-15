@@ -19,10 +19,11 @@ setlocal nolist
 setlocal foldcolumn=0
 setlocal colorcolumn=0
 
-if !exists("g:no_plugin_maps") && !exists("g:no_man_maps")
-  nnoremap <silent> <buffer> <C-]>    :call man#get_page(g:find_man_window, 'edit')<CR>
-  nnoremap <silent> <buffer> <C-t>    :call man#pop_tag_stack()<CR>
-  nnoremap <silent> <buffer> q :q<CR>
+if !exists('g:no_plugin_maps') && !exists('g:no_man_maps')
+  nnoremap <silent> <buffer> <C-]>    :call man#get_page(g:man_find_window, 'edit')<CR>
+  nmap     <silent> <buffer> <K>      <C-]>
+  nnoremap <silent> <buffer> <C-t>    :call man#pop_tag()<CR>
+  nnoremap <silent> <nowait><buffer>  q <C-W>c
 endif
 
 if exists('g:ft_man_folding_enable') && (g:ft_man_folding_enable == 1)
