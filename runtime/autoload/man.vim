@@ -1,6 +1,7 @@
 " Ensure Vim is not recursively invoked (man-db does this)
 " by removing MANPAGER from the environment
 " More info here http://comments.gmane.org/gmane.editors.vim.devel/29085
+" TODO when unlet $FOO is implemented, move this back to ftplugin/man.vim
 if &shell =~# 'fish$'
   let s:man_cmd = 'set -e MANPAGER; man ^/dev/null'
 else
@@ -22,41 +23,33 @@ catch /E145:/
 endtry
 
 function! man#get_page(bang, editcmd, ...) abort
-  " fpage is a string like 'printf(2)' or just 'printf'
-  if a:0 == 0
-    let fpage = expand('<cWORD>')
+  if a:0 > 2
+    call s:error('too many arguments')
+    return
+  elseif a:0 == 2
+    let sect = a:000[0]
+    let page = a:000[1]
+  else
+    " fpage is a string like 'printf(2)' or just 'printf'
+    " if no argument, use the word under the cursor
+    let fpage = get(a:000, 0, expand('<cWORD>'))
     if empty(fpage)
       call s:error('no WORD under cursor')
       return
     endif
-  elseif a:0 > 2
-    call s:error('too many arguments')
-    return
-  elseif a:0 == 1
-    " only page
-    let fpage = a:000[0]
-  else
-    " page and sect
-    let fpage = a:000[1].'('.a:000[0].')'
-  endif
-
-  " if fpage is a path, no need to parse anything
-  if fpage =~# '\/'
-    let page = fpage
-    let sect = ''
-  else
     let [page, sect] = s:parse_page_and_section(fpage)
     if empty(page)
       call s:error('invalid manpage name '.fpage)
       return
     endif
-    let path = s:find_page(sect, page)
-    if empty(path)
-      call s:error('no manual entry for '.fpage)
-      return
-    else
-      let sect = s:parse_sect(path[0])
-    endif
+  endif
+
+  let path = s:find_page(sect, page)
+  if empty(path)
+    call s:error('no manual entry for '.page.(empty(sect)?'':'('.sect.')'))
+    return
+  elseif page !~# '\/' " if page is not a path, find the default section
+    let sect = s:parse_sect(path[0])
   endif
 
   call s:push_tag()
@@ -79,7 +72,7 @@ function! man#pop_tag() abort
   endif
 endfunction
 
-" save current position
+" save current position in the stack
 function! s:push_tag() abort
   let s:tag_stack += [{
         \ 'buf':  bufnr('%'),
@@ -118,13 +111,13 @@ endfunction
 
 " returns the path of a manpage
 function! s:find_page(sect, page) abort
-  return split(system(s:man_cmd.s:man_find_arg.' '.s:man_args(a:sect, a:page)), '\n')
+  return systemlist(s:man_cmd.s:man_find_arg.' '.s:man_args(a:sect, a:page))
 endfunction
 
 " parses the section out of the path to a manpage
 function! s:parse_sect(path) abort
   let tail = fnamemodify(a:path, ':t')
-  if fnamemodify(tail, ':e') =~# '\%('.s:man_extensions.'\)\n'
+  if fnamemodify(tail, ':e') =~# s:man_extensions
     let tail = fnamemodify(tail, ':r')
   endif
   return substitute(tail, '\f\+\.\([^.]\+\)', '\1', '')
@@ -160,7 +153,7 @@ endfunction
 
 function! s:error(msg) abort
   redrawstatus!
-  echon 'man: '
+  echon 'man.vim: '
   echohl ErrorMsg
   echon a:msg
   echohl None
@@ -176,8 +169,8 @@ function! man#Complete(ArgLead, CmdLine, CursorPos) abort
   if (l > 1 && args[1] =~# ')\f*$') || l > 3
     return
   elseif l == 3
-    " cursor (|) is at ':Man 3 printf |', or ':Man 3 printf(|'
-    if empty(a:ArgLead) || a:ArgLead =~# ')\|('
+    " cursor (|) is at ':Man 3 printf |'
+    if empty(a:ArgLead)
       return
     endif
     let sect = args[1]

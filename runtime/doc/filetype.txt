@@ -520,10 +520,12 @@ Commands:
 Man			Display the manual page for <cWORD> in a new tab.
 Man {name}		Display the manual page for {name} in a new tab.
 Man {sect} {name}	Same as above except specify the section.
-Man {name}({sect})	Alternate syntax to above.
+Man {name}({sect})	Alternate syntax to above. Exists so that you can see
+			the section of the manpage you are completing
+Man {path}		Open the manpage specified by path, if it's in the current
+			directory, specify the leading ./
 
 Local mappings:
-=======
 CTRL-]			Jump to the manual page for the <cWORD> under the cursor.
 K			Same as CTRL-].
 CTRL-T			Jump back to the previous manual page.
@@ -541,17 +543,6 @@ g:man_find_window
 			before opening a new one. A bang on the commands will
 			do the opposite of whatever this variable is set to.
 			Defaults to 1.
-g:man_synopsis
-			This only applies if you will be using languages other
-			than english.
-			In manpages of sections 2 and 3, there is sometimes some C
-			code under the heading SYNOPSIS. In english we can just match
-			SYNOPSIS and then can highlight all of the C code underneath.
-			However in other languages, SYNOPSIS is a different word, so how
-			are we to tell where the C code begins? This variable is a regex
-			that is used to match the SYNOPSIS heading.
-			Modify it for the language(s) you will be using.
-			Defaults to '\V\^SYNOPSIS\$'.
 g:no_man_maps
 			If set, no mappings are created in man buffers.
 			Defaults to 0.

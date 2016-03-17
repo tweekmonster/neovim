@@ -21,7 +21,13 @@ highlight default link manSubHeading     Function
 if getline(1) =~# '^\f\+([23][a-zA-Z]\=)'
   syntax include @cCode $VIMRUNTIME/syntax/c.vim
   syntax match manCFuncDefinition display '\<\h\w*\>\s*('me=e-1 contained
-  execute "syntax region manSynopsis start='".g:man_synopsis."'".'hs=s+8 end="^\%(\S.*\)\=\S$"me=e-12 keepend contains=manSectionHeading,@cCode,manCFuncDefinition'
+  syntax region manSynopsis start='\V\^\%(
+        \SYNOPSIS\|
+        \SYNTAX\|
+        \SINTASSI\|
+        \SKŁADNIA\|
+        \СИНТАКСИС\|
+        \書式\)\$'hs=s+8 end='^\%(\S.*\)\=\S$'me=e-12 keepend contains=manSectionHeading,@cCode,manCFuncDefinition
   highlight default link manCFuncDefinition Function
 endif
 
