@@ -2405,7 +2405,7 @@ win_line (
 
   /* Highlight the current line in the quickfix window. */
   if (bt_quickfix(wp->w_buffer) && qf_current_entry(wp) == lnum)
-    line_attr = hl_attr(HLF_L);
+    line_attr = hl_attr(HLF_PSI);
   if (line_attr != 0)
     area_highlighting = TRUE;
 
