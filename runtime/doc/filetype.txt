@@ -531,21 +531,21 @@ K			Same as CTRL-].
 CTRL-T			Jump back to the previous manual page.
 q			Close the window.
 
-To enable folding use this: >
-	let g:ft_man_folding_enable = 1
-If you do not like the default folding, use an autocommand to add your desired
-folding style instead.  For example: >
-	autocmd FileType man setlocal foldmethod=indent foldenable
-
 Variables:
 g:man_find_window
 			If set, man will attempt to find the current man window
-			before opening a new one. A bang on the commands will
-			do the opposite of whatever this variable is set to.
-			Defaults to 1.
+			before opening a new one. Defaults to 1.
 g:no_man_maps
 			If set, no mappings are created in man buffers.
 			Defaults to 0.
+
+g:ft_man_folding_enable
+                        If set, manpages are folded with foldmethod=indent and
+                        foldnestmax=1.
+
+If you do not like the default folding, use an autcommand to add your desired
+folding style instead. For example: >
+          autocmd FileType man setlocal foldmethod=indent foldenable
 
 PDF							*ft-pdf-plugin*
 

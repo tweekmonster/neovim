@@ -1,12 +1,13 @@
 " Ensure Vim is not recursively invoked (man-db does this)
 " by removing MANPAGER from the environment
 " More info here http://comments.gmane.org/gmane.editors.vim.devel/29085
-" TODO when unlet $FOO is implemented, move this back to ftplugin/man.vim
+" TODO(nhooyr) when unlet $FOO is implemented, move this back to ftplugin/man.vim
 if &shell =~# 'fish$'
-  let s:man_cmd = 'set -e MANPAGER; man ^/dev/null'
+  let s:man_cmd = 'env -u MANPAGER man ^/dev/null '
 else
-  let s:man_cmd = 'unset MANPAGER; man 2>/dev/null '
+  let s:man_cmd = 'env -u MANPAGER man 2>/dev/null '
 endif
+
 " regex for valid extensions that manpages can have
 let s:man_extensions = '[glx]z\|bz2\|lzma\|Z'
 let s:man_sect_arg = ''
@@ -22,12 +23,12 @@ catch /E145:/
   " Ignore the error in restricted mode
 endtry
 
-function! man#get_page(bang, editcmd, ...) abort
+function! man#get_page(editcmd, ...) abort
   if a:0 > 2
     call s:error('too many arguments')
     return
   elseif a:0 == 2
-    let sect = a:000[0]
+    let sect = tolower(a:000[0])
     let page = a:000[1]
   else
     " fpage is a string like 'printf(2)' or just 'printf'
@@ -37,7 +38,7 @@ function! man#get_page(bang, editcmd, ...) abort
       call s:error('no WORD under cursor')
       return
     endif
-    let [page, sect] = s:parse_page_and_section(fpage)
+    let [page, sect] = s:parse_page_and_sect_fpage(fpage)
     if empty(page)
       call s:error('invalid manpage name '.fpage)
       return
@@ -45,22 +46,16 @@ function! man#get_page(bang, editcmd, ...) abort
   endif
 
   let path = s:find_page(sect, page)
-  if empty(path)
+  if empty(path) || path[0] == ''
     call s:error('no manual entry for '.page.(empty(sect)?'':'('.sect.')'))
     return
-  elseif page !~# '\/' " if page is not a path, find the default section
-    let sect = s:parse_sect(path[0])
+  elseif page !~# '\/' " if page is not a path, parse the page and section from the path
+    let [page, sect] = s:parse_page_and_sect_path(path[0])
   endif
 
   call s:push_tag()
 
-  if g:man_find_window != a:bang && &filetype !=# 'man'
-    let cmd = s:find_man(a:editcmd)
-  else
-    let cmd = a:editcmd
-  endif
-
-  call s:read_page(sect, page, cmd)
+  call s:read_page(sect, page, a:editcmd)
 endfunction
 
 " move to previous position in the stack
@@ -83,6 +78,9 @@ endfunction
 
 " find the closest man window above/left
 function! s:find_man(cmd) abort
+  if g:man_find_window != 1 || &filetype ==# 'man'
+    return a:cmd
+  endif
   if winnr('$') > 1
     let thiswin = winnr()
     while 1
@@ -96,12 +94,15 @@ function! s:find_man(cmd) abort
   return a:cmd
 endfunction
 
-" parses the sect/page out of 'page(sect)'
-function! s:parse_page_and_section(fpage) abort
+" parses the page and sect out of 'page(sect)'
+function! s:parse_page_and_sect_fpage(fpage) abort
   let ret = split(a:fpage, '(')
-  if len(ret) == 2 && ret[1] =~# '^\f\+)\f*$'
+  if len(ret) == 2
     let iret = split(ret[1], ')')
-    return [ret[0], iret[0]]
+    if len(iret) == 0
+      return ['','']
+    endif
+    return [ret[0], tolower(iret[0])]
   elseif len(ret) == 1
     return [ret[0], '']
   else
@@ -109,22 +110,24 @@ function! s:parse_page_and_section(fpage) abort
   endif
 endfunction
 
+" parses the page and sect out of 'path/page.sect'
+function! s:parse_page_and_sect_path(path) abort
+  let tail = fnamemodify(a:path, ':t')
+  if fnamemodify(tail, ':e') =~# s:man_extensions
+    let tail = fnamemodify(tail, ':r')
+  endif
+  let page = substitute(tail, '^\(\f\+\)\..\+$', '\1', '')
+  let sect = substitute(tail, '^\f\+\.\(.\+\)$', '\1', '')
+  return [page, sect]
+endfunction
+
 " returns the path of a manpage
 function! s:find_page(sect, page) abort
   return systemlist(s:man_cmd.s:man_find_arg.' '.s:man_args(a:sect, a:page))
 endfunction
 
-" parses the section out of the path to a manpage
-function! s:parse_sect(path) abort
-  let tail = fnamemodify(a:path, ':t')
-  if fnamemodify(tail, ':e') =~# s:man_extensions
-    let tail = fnamemodify(tail, ':r')
-  endif
-  return substitute(tail, '\f\+\.\([^.]\+\)', '\1', '')
-endfunction
-
 function! s:read_page(sect, page, cmd)
-  silent execute a:cmd 'man://'.a:page.(empty(a:sect)?'':'('.a:sect.')')
+  silent execute s:find_man(a:cmd) 'man://'.a:page.(empty(a:sect)?'':'('.a:sect.')')
   setlocal modifiable
   " remove all the text, incase we already loaded the manpage before
   silent keepjumps %delete _
@@ -173,18 +176,18 @@ function! man#Complete(ArgLead, CmdLine, CursorPos) abort
     if empty(a:ArgLead)
       return
     endif
-    let sect = args[1]
+    let sect = tolower(args[1])
     let page = a:ArgLead
   elseif l == 2
     " cursor (|) is at ':Man 3 |'
     if empty(a:ArgLead)
       let page = ''
-      let sect = args[1]
+      let sect = tolower(args[1])
     elseif a:ArgLead =~# '^\f\+(\f*$'
       " cursor (|) is at ':Man printf(|'
       let tmp = split(a:ArgLead, '(')
       let page = tmp[0]
-      let sect = substitute(get(tmp, 1, ''), ')$', '', '')
+      let sect = tolower(substitute(get(tmp, 1, ''), ')$', '', ''))
       let fpage = 1
     else
       " cursor (|) is at ':Man printf|'
@@ -204,7 +207,7 @@ function! s:get_candidates(page, sect, fpage) abort
   let find = '\(.\+\)\.\%('.s:man_extensions.'\)\@!\'
   " if the page is a path, complete files
   if empty(a:sect) && a:page =~# '\/'
-    "TODO why does this complete the last one automatically
+    " TODO(nhooyr) why does this complete the last one automatically
     let candidates = glob(a:page.'*', 0, 1)
   else
     " if the section is not empty and the cursor (|) is not at
