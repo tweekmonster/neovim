@@ -3,8 +3,9 @@ if exists('g:loaded_man')
 endif
 let g:loaded_man = 1
 
-let g:man_find_window =
-      \ get( g:, 'man_find_window', 1 )
+let g:man_find_window = get(g:, 'man_find_window', 1 )
 
-command! -complete=customlist,man#Complete -nargs=* Man call
-      \ man#get_page((tabpagenr()-1).'tabnew', <f-args>)
+command! -count=10 -complete=customlist,man#complete -nargs=* Man call
+      \ man#get_page(<count>, (tabpagenr()-1).'tabnew', <f-args>)
+
+nnoremap <silent> <Plug>(Man) :<C-u>call man#get_page(v:count, (tabpagenr()-1).'tabnew', expand('<cWORD>'))<CR>

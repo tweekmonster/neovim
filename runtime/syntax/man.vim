@@ -6,8 +6,8 @@ syntax case  ignore
 syntax match manReference       '\f\+(\%([0-8][a-z]\=\|n\))'
 syntax match manTitle           '^\%1l\S\+\%((\%([0-8][a-z]\=\|n\))\)\=.*$'
 syntax match manSubHeading      '^\s\{3\}\%(\S.*\)\=\S$'
-syntax match manOptionDesc      '^\s\+[+-][a-z0-9]\S*'
-syntax match manLongOptionDesc  '^\s\+--[a-z0-9]\S*'
+syntax match manOptionDesc      '^\s\+[+-]\S\+'
+syntax match manLongOptionDesc  '^\s\+--\S\+'
 " prevent manSectionHeading from matching last line
 execute 'syntax match manSectionHeading  "^\%(\%>1l\%<'.line('$').'l\)\%(\S.*\)\=\S$"'
 
