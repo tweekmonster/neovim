@@ -7,8 +7,6 @@ else
   let s:man_cmd = 'man -P cat 2>/dev/null '
 endif
 
-" regex for valid extensions that manpages can have
-let s:man_extensions = '[glx]z\|bz2\|lzma\|Z'
 let s:man_sect_arg = ''
 let s:man_find_arg = '-w'
 let s:tag_stack = []
@@ -98,16 +96,17 @@ function! s:parse_page_and_sect_fpage(fpage) abort
   if len(ret) > 1
     let iret = split(ret[1], ')')
     return [ret[0], tolower(iret[0])]
-  else
-    return [ret[0], '']
   endif
+  return [ret[0], '']
 endfunction
 
 " parses the page and sect out of 'path/page.sect'
 function! s:parse_page_and_sect_path(path) abort
-  let tail = fnamemodify(a:path, ':t')
-  if fnamemodify(tail, ':e') =~# s:man_extensions
-    let tail = fnamemodify(tail, ':r')
+  " regex for valid extensions that manpages can have
+  if a:path =~# '\.\%([glx]z\|bz2\|lzma\|Z\)$'
+    let tail = fnamemodify(fnamemodify(a:path, ':r'), ':t')
+  else
+    let tail = fnamemodify(a:path, ':t')
   endif
   let page = matchstr(tail, '^\f\+\ze\.')
   let sect = matchstr(tail, '\.\zs[^.]\+$')
@@ -157,12 +156,16 @@ function! s:error(msg) abort
   echohl None
 endfunction
 
+function! s:init_mandirs() abort
+  let mandirs_list = split(system(s:man_cmd.s:man_find_arg), ':\|\n')
+  " removes duplicates and then join by comma
+  let s:mandirs = join(filter(mandirs_list, 'index(mandirs_list, v:val, v:key+1)==-1'), ',')
+endfunction
+call s:init_mandirs()
+
 function! man#complete(arg_lead, cmd_line, cursor_pos) abort
   let args = split(a:cmd_line)
   let l = len(args)
-  " if the cursor (|) is at ':Man printf(|' then
-  " make sure to display the section. See s:get_candidates
-  let fpage = 0
   " if already completed a manpage, we return
   if (l > 1 && args[1] =~# ')\f*$') || l > 3
     return
@@ -171,8 +174,8 @@ function! man#complete(arg_lead, cmd_line, cursor_pos) abort
     if empty(a:arg_lead)
       return
     endif
-    let sect = tolower(args[1])
     let page = a:arg_lead
+    let sect = tolower(args[1])
   elseif l == 2
     " cursor (|) is at ':Man 3 |'
     if empty(a:arg_lead)
@@ -185,6 +188,11 @@ function! man#complete(arg_lead, cmd_line, cursor_pos) abort
       let sect = tolower(get(tmp, 1, ''))
     else
       " cursor (|) is at ':Man printf|'
+      " if the page is a path, complete files
+      if a:arg_lead =~# '\/'
+        "TODO why does this complete the last one automatically
+        return glob(a:arg_lead.'*', 0, 1)
+      endif
       let page = a:arg_lead
       let sect = ''
     endif
@@ -192,30 +200,14 @@ function! man#complete(arg_lead, cmd_line, cursor_pos) abort
     let page = ''
     let sect = ''
   endif
-  return s:get_candidates(page, sect)
+  return map(globpath(s:mandirs,'*/'.page.'*.'.sect.'*', 0, 1), 's:format_candidate(v:val, sect)')
 endfunction
 
-function! s:init_mandirs() abort
-  let mandirs_list = split(system(s:man_cmd.s:man_find_arg), ':\|\n')
-  " removes duplicates and then join by comma
-  let s:mandirs = join(filter(mandirs_list, 'index(mandirs_list, v:val, v:key+1)==-1'), ',')
-endfunction
-call s:init_mandirs()
-
-function! s:get_candidates(page, sect) abort
-  let candidates = globpath(s:mandirs,'*/'.a:page.'*.'.a:sect.'*', 0, 1)
-  " The extension of each candidate must either (have a:sect as a prefix and cannot be part of
-  " s:man_extensions) or (it must be part of s:man_extensions and the root of the file name's
-  " extension must have a:sect as a prefix).
-  call filter(candidates, "(v:val =~# a:sect.'[^.]*$' && v:val !~# s:man_extensions.'$' ) || (v:val =~# s:man_extensions.'$' && fnamemodify(v:val, ':r') =~# a:sect.'[^.]*$')")
-  " if the page is a path, complete files
-  if empty(a:sect) && a:page =~# '\/'
-    "TODO(nhooyr) why does this complete the last one automatically
-    let candidates = glob(a:page.'*', 0, 1)
-  else
-    let find = '\(.\+\)\.\%('.s:man_extensions.'\)\@!\([^.]\+\).*'
-    let repl = '\1(\2)'
-    call map(candidates, 'substitute((fnamemodify(v:val, ":t")), find, repl, "")')
+function! s:format_candidate(c, sect) abort
+  let [page, sect] = s:parse_page_and_sect_path(a:c)
+  if sect ==# a:sect
+    return page
+  elseif sect =~# a:sect.'[^.]\+$'
+    return page.'('.sect.')'
   endif
-  return candidates
 endfunction
