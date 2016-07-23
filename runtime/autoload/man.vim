@@ -41,7 +41,7 @@ function! man#get_page(count, editcmd, ...) abort
 
   let out = systemlist(s:man_cmd.s:man_find_arg.' '.s:man_args(sect, page))
   if empty(out) || out[0] == ''
-    call s:error('no manual entry for '.page.(empty(sect)?'':'('.sect.')'))
+    call s:error('no manual entry for '.page.(empty(sect) && sect != 0 ? '':'('.sect.')'))
     return
   elseif page !~# '\/' " if page is not a path, parse the page and section from the path
     " use the last line because if we had something like printf(man) then man
@@ -110,12 +110,12 @@ function! s:parse_page_and_sect_path(path) abort
     let tail = fnamemodify(tail, ':r')
   endif
   let page = matchstr(tail, '^\f\+\ze\.')
-  let sect = matchstr(tail, '\.\zs.\+$')
+  let sect = matchstr(tail, '\.\zs[^.]\+$')
   return [page, sect]
 endfunction
 
 function! s:read_page(sect, page, cmd)
-  silent execute s:find_man(a:cmd) 'man://'.a:page.(empty(a:sect)?'':'('.a:sect.')')
+  silent execute s:find_man(a:cmd) 'man://'.a:page.(empty(a:sect) && a:sect != 0 ? '':'('.a:sect.')')
   setlocal modifiable
   " remove all the text, incase we already loaded the manpage before
   silent keepjumps %delete _
@@ -143,7 +143,7 @@ function! man#normalize_page()
 endfunction
 
 function! s:man_args(sect, page) abort
-  if !empty(a:sect)
+  if !empty(a:sect) || a:sect == 0
     return s:man_sect_arg.' '.shellescape(a:sect).' '.shellescape(a:page)
   endif
   return shellescape(a:page)
@@ -183,7 +183,6 @@ function! man#complete(arg_lead, cmd_line, cursor_pos) abort
       let tmp = split(a:arg_lead, '(')
       let page = tmp[0]
       let sect = tolower(get(tmp, 1, ''))
-      let fpage = 1
     else
       " cursor (|) is at ':Man printf|'
       let page = a:arg_lead
@@ -193,9 +192,8 @@ function! man#complete(arg_lead, cmd_line, cursor_pos) abort
     let page = ''
     let sect = ''
   endif
-  return s:get_candidates(page, sect, fpage)
+  return s:get_candidates(page, sect)
 endfunction
-
 
 function! s:init_mandirs() abort
   let mandirs_list = split(system(s:man_cmd.s:man_find_arg), ':\|\n')
@@ -204,7 +202,7 @@ function! s:init_mandirs() abort
 endfunction
 call s:init_mandirs()
 
-function! s:get_candidates(page, sect, fpage) abort
+function! s:get_candidates(page, sect) abort
   let candidates = globpath(s:mandirs,'*/'.a:page.'*.'.a:sect.'*', 0, 1)
   " The extension of each candidate must either (have a:sect as a prefix and cannot be part of
   " s:man_extensions) or (it must be part of s:man_extensions and the root of the file name's
@@ -215,16 +213,8 @@ function! s:get_candidates(page, sect, fpage) abort
     "TODO(nhooyr) why does this complete the last one automatically
     let candidates = glob(a:page.'*', 0, 1)
   else
-    let find = '\(.\+\)\.\%('.s:man_extensions.'\)\@!\'
-    " if the section is not empty and the cursor (|) is not at
-    " ':Man printf(|' then do not show sections.
-    if !empty(a:sect) && !a:fpage
-      let find .= '%([^.]\+\).*'
-      let repl = '\1'
-    else
-      let find .= '([^.]\+\).*'
-      let repl = '\1(\2)'
-    endif
+    let find = '\(.\+\)\.\%('.s:man_extensions.'\)\@!\([^.]\+\).*'
+    let repl = '\1(\2)'
     call map(candidates, 'substitute((fnamemodify(v:val, ":t")), find, repl, "")')
   endif
   return candidates
