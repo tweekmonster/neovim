@@ -513,13 +513,12 @@ Local mappings:
 MAN					*ft-man-plugin* *:Man* *man.vim*
 
 View manpages from the comfort of vim. Features include syntax highlighting,
-autocompletion, multilingual support, and manpage jumping.
+smart autocompletion, multilingual support, and manpage jumping.
 Also see |find-manpage|.
 
 You can use neovim as a manpager by setting >
 
      export MANPAGER="nvim -c 'set ft=man' -"
-
 
 Commands:
 Man			Display the manual page for <cWORD> in a new tab.
@@ -531,10 +530,12 @@ Man {path}		Open the manpage specified by path, if it's in the current
 			directory, specify the leading ./
 Global Mappings:
 <Plug>(Man)             Jump to the manual page for the <cWORD> under the
-                        cursor in a new tab.
+                        cursor in a new tab. Takes a count as the manpage
+			section.
 
 Local mappings:
-CTRL-]			Jump to the manual page for the <cWORD> under the cursor.
+CTRL-]			Jump to the manual page for the <cWORD> under the cursor. Takes a count
+                        as the manpage section.
 K			Same as CTRL-].
 CTRL-T			Jump back to the previous manual page.
 q			Close the window.
