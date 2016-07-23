@@ -5,7 +5,7 @@ let b:did_ftplugin = 1
 
 if expand('%') !~# '^man:\/\/'
   call man#normalize_page()
-  silent execute 'file '.'man://'.tolower(substitute(getline(1), '^\(\S\+\).*$', '\1', 0))
+  silent execute 'file '.'man://'.tolower(matchstr(getline(1), '^\S\+'))
 endif
 
 setlocal buftype=nofile

@@ -109,9 +109,8 @@ function! s:parse_page_and_sect_path(path) abort
   if fnamemodify(tail, ':e') =~# s:man_extensions
     let tail = fnamemodify(tail, ':r')
   endif
-  " TODO(nhooyr) all substitutes to matchlist/matchstr maybe?
-  let page = substitute(tail, '^\(\f\+\)\..\+$', '\1', '')
-  let sect = substitute(tail, '^\f\+\.\(.\+\)$', '\1', '')
+  let page = matchstr(tail, '^\f\+\ze\.')
+  let sect = matchstr(tail, '\.\zs.\+$')
   return [page, sect]
 endfunction
 
@@ -129,7 +128,7 @@ endfunction
 
 function! man#normalize_page()
   " remove all those backspaces
-  execute "silent keepjumps %substitute,.\b,,g"
+  execute "silent keepjumps %substitute,.\b,,ge"
   " remove blank lines from top and bottom.
   while getline(1) =~# '^\s*$'
     silent keepjumps 1delete _
@@ -183,7 +182,7 @@ function! man#complete(ArgLead, CmdLine, CursorPos) abort
       " cursor (|) is at ':Man printf(|'
       let tmp = split(a:ArgLead, '(')
       let page = tmp[0]
-      let sect = tolower(substitute(get(tmp, 1, ''), ')$', '', ''))
+      let sect = tolower(get(tmp, 1, ''))
       let fpage = 1
     else
       " cursor (|) is at ':Man printf|'
@@ -197,12 +196,20 @@ function! man#complete(ArgLead, CmdLine, CursorPos) abort
   return s:get_candidates(page, sect, fpage)
 endfunction
 
+function! s:init_mandirs() abort
+  " gets list of MANDIRS
+  let mandirs_list = split(system(s:man_cmd.s:man_find_arg), ':\|\n')
+  " removes duplicates and then join by comma
+  let s:mandirs = join(filter(mandirs_list, 'index(mandirs_list, v:val, v:key+1)==-1'), ',')
+endfunction
+call s:init_mandirs()
+
 function! s:get_candidates(page, sect, fpage) abort
-  let candidates = globpath(s:MANDIRS(),'*/'.a:page.'*.'.a:sect.'*', 0, 1)
-  " The extension of each candidate must either (be a:sect and not part of
-  " s:man_extensions) or (it must be part of s:man_extensions and the root of
-  " the file name's extension must be a:sect).
-  call filter(candidates, "(v:val =~# a:sect.'$' && v:val !~# s:man_extensions.'$' ) || (v:val =~# s:man_extensions.'$' && fnamemodify(v:val, ':r') =~# a:sect.'$')")
+  let candidates = globpath(s:mandirs,'*/'.a:page.'*.'.a:sect.'*', 0, 1)
+  " The extension of each candidate must either (have a:sect as a prefix and cannot be part of
+  " s:man_extensions) or (it must be part of s:man_extensions and the root of the file name's
+  " extension must have a:sect as a prefix).
+  call filter(candidates, "(v:val =~# a:sect.'[^.]*$' && v:val !~# s:man_extensions.'$' ) || (v:val =~# s:man_extensions.'$' && fnamemodify(v:val, ':r') =~# a:sect.'[^.]*$')")
   " if the page is a path, complete files
   if empty(a:sect) && a:page =~# '\/'
     "TODO(nhooyr) why does this complete the last one automatically
@@ -222,11 +229,3 @@ function! s:get_candidates(page, sect, fpage) abort
   endif
   return candidates
 endfunction
-
-function! s:MANDIRS() abort
-  " gets list of MANDIRS
-  let mandirs_list = split(system(s:man_cmd.s:man_find_arg), ':\|\n')
-  " removes duplicates and then joins by comma
-  return join(filter(mandirs_list, 'index(mandirs_list, v:val, v:key+1)==-1'), ',')
-endfunction
-
