@@ -29,7 +29,7 @@ function! man#get_page(count, editcmd, ...) abort
     return
   elseif a:0 == 1
     let [page, sect] = s:parse_page_and_sect_fpage(a:000[0])
-    if empty(sect) && a:count != 10
+    if (empty(sect) && sect != 0) && a:count != 10
       let sect = a:count
     endif
   else
@@ -39,7 +39,7 @@ function! man#get_page(count, editcmd, ...) abort
 
   let out = systemlist(s:man_cmd.s:man_find_arg.' '.s:man_args(sect, page))
   if empty(out) || out[0] == ''
-    call s:error('no manual entry for '.page.(empty(sect) && sect != 0 ? '':'('.sect.')'))
+    call s:error('no manual entry for '.page.(s:empty_sect(sect)?'':'('.sect.')'))
     return
   elseif page !~# '\/' " if page is not a path, parse the page and section from the path
     " use the last line because if we had something like printf(man) then man
@@ -71,23 +71,21 @@ function! s:push_tag() abort
 endfunction
 
 " find the closest man window above/left
+" TODO(nhooyr) more ways to open manpages
 function! s:find_man(cmd) abort
-  if g:man_find_window != 1 || &filetype ==# 'man'
+  if g:man_find_window == 0
     return a:cmd
   endif
-  if winnr('$') > 1
-    let thiswin = winnr()
-    while 1
-      if &filetype ==# 'man'
-        return 'edit'
-      endif
-      wincmd w
-      if thiswin == winnr()
-        return a:cmd
-      endif
-    endwhile
-  endif
-  return a:cmd
+  let thiswin = winnr()
+  while 1
+    if &filetype ==# 'man'
+      return 'edit'
+    endif
+    wincmd w
+    if thiswin == winnr()
+      return a:cmd
+    endif
+  endwhile
 endfunction
 
 " parses the page and sect out of 'page(sect)'
@@ -114,7 +112,7 @@ function! s:parse_page_and_sect_path(path) abort
 endfunction
 
 function! s:read_page(sect, page, cmd)
-  silent execute s:find_man(a:cmd) 'man://'.a:page.(empty(a:sect) && a:sect != 0 ? '':'('.a:sect.')')
+  silent execute s:find_man(a:cmd) 'man://'.a:page.(s:empty_sect(a:sect)? '':'('.a:sect.')')
   setlocal modifiable
   " remove all the text, incase we already loaded the manpage before
   silent keepjumps %delete _
@@ -142,10 +140,15 @@ function! man#normalize_page()
 endfunction
 
 function! s:man_args(sect, page) abort
-  if !empty(a:sect) || a:sect == 0
+  if a:sect != 10 && (!empty(a:sect) || a:sect == 0)
     return s:man_sect_arg.' '.shellescape(a:sect).' '.shellescape(a:page)
   endif
   return shellescape(a:page)
+endfunction
+"
+" checks if sect is empty
+function! s:empty_sect(sect)
+  return a:sect == 10 || (a:sect != 0 && empty(a:sect))
 endfunction
 
 function! s:error(msg) abort
