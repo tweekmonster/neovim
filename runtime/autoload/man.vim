@@ -112,7 +112,7 @@ function! s:parse_page_and_sect_path(path) abort
 endfunction
 
 function! s:read_page(sect, page, cmd)
-  silent execute s:find_man(a:cmd) 'man://'.a:page.(s:empty_sect(a:sect)? '':'('.a:sect.')')
+  silent execute s:find_man(a:cmd) 'man://'.a:page.(s:empty_sect(a:sect)?'':'('.a:sect.')')
   setlocal modifiable
   " remove all the text, incase we already loaded the manpage before
   silent keepjumps %delete _

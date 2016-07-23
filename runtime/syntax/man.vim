@@ -1,3 +1,6 @@
+" TODO(nhooyr) use backspaced text for better syntax highlighting.
+" see https://github.com/neovim/neovim/pull/4449#issuecomment-234696194
+
 if exists('b:current_syntax')
   finish
 endif
