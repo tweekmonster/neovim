@@ -132,12 +132,11 @@ function! man#normalize_page()
   endwhile
 
   let view = winsaveview()
-  " Find ^H and format them.  Uses \255 (bullet) and \246 (broken pipe) as
-  " delimiters.
-  silent keepjumps %s/\%(\(.\)\b\1\)\+/\="\225".substitute(submatch(0),
-        \ '\(.\)\b\1', '\1', 'g')."\225"/ge
-  silent keepjumps %s/\%(_\b.\)\+/\="\246".substitute(submatch(0),
-        \ '_\b\(.\)', '\1', 'g')."\246"/ge
+  " Find ^H and format them.  Uses ^B for bold and ^U for underline.
+  silent keepjumps %s/\%(\(.\)\b\1\)\+/\=''.substitute(submatch(0),
+        \ '\(.\)\b\1', '\1', 'g').''/ge
+  silent keepjumps %s/\%(_\b.\)\+/\=''.substitute(submatch(0),
+        \ '_\b\(.\)', '\1', 'g').''/ge
   call histdel('search', -1)
   let @/ = histget('search', -1)
   call winrestview(view)

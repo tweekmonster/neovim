@@ -11,10 +11,10 @@ syntax match manTitle           '^\%1l\S\+\%((\%([0-8][a-z]\=\|n\))\)\=.*$'
 syntax match manSubHeading      '^\s\{3\}\%(\S.*\)\=\S$'
 syntax match manOptionDesc      '^\s\+[+-]\S\+'
 syntax match manLongOptionDesc  '^\s\+--\S\+'
-syntax match manBold            '\%o225\%(\%o225\@!.\)\{-}\%o225' containedin=TOP contains=manBoldDelim
-syntax match manUnderline       '\%o246\%(\%o246\@!.\)\{-}\%o246' containedin=TOP contains=manUnderlineDelim
-syntax match manBoldDelim       '\%o225' contained conceal
-syntax match manUnderlineDelim  '\%o246' contained conceal
+syntax match manBold            '\%(\@!.\)\{-}' containedin=TOP contains=manBoldDelim
+syntax match manUnderline       '\%(\@!.\)\{-}' containedin=TOP contains=manUnderlineDelim
+syntax match manBoldDelim       '' contained conceal
+syntax match manUnderlineDelim  '' contained conceal
 
 " prevent manSectionHeading from matching last line
 execute 'syntax match manSectionHeading  "^\%(\%>1l\%<'.line('$').'l\)\%(\S.*\)\=\S$" contains=manBoldDelim'
