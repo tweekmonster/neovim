@@ -113,10 +113,12 @@ endfunction
 
 function! s:read_page(sect, page, cmd)
   silent execute s:find_man(a:cmd) 'man://'.a:page.(s:empty_sect(a:sect)?'':'('.a:sect.')')
-  setlocal modifiable
+  setlocal modifiable conceallevel=2
   " remove all the text, incase we already loaded the manpage before
   silent keepjumps %delete _
   let $MANWIDTH = winwidth(0)-1
+  " keep the formatting characters in the output
+  let $MAN_KEEP_FORMATTING = 1
   " read manpage into buffer
   silent execute 'r!'.s:man_cmd.s:man_args(a:sect, a:page)
   call man#normalize_page()
@@ -124,12 +126,22 @@ function! s:read_page(sect, page, cmd)
 endfunction
 
 function! man#normalize_page()
-  " remove all those backspaces
-  execute "silent keepjumps %substitute,.\b,,ge"
-  " remove blank lines from top and bottom.
+  " remove blank lines from top.
   while getline(1) =~# '^\s*$'
     silent keepjumps 1delete _
   endwhile
+
+  let view = winsaveview()
+  " Find ^H and format them.  Uses \255 (bullet) and \246 (broken pipe) as
+  " delimiters.
+  silent keepjumps %s/\%(\(.\)\b\1\)\+/\="\225".substitute(submatch(0),
+        \ '\(.\)\b\1', '\1', 'g')."\225"/ge
+  silent keepjumps %s/\%(_\b.\)\+/\="\246".substitute(submatch(0),
+        \ '_\b\(.\)', '\1', 'g')."\246"/ge
+  call histdel('search', -1)
+  let @/ = histget('search', -1)
+  call winrestview(view)
+
   " TODO(nhooyr) is deleting the bottom lines necessary?
   " I think only deleting the first line is necessary when using r! to
   " read manpage in.
