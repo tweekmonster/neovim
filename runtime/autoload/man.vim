@@ -190,6 +190,20 @@ function! s:open_page(sect, name)
     silent keepjumps 1delete _
   endwhile
   setlocal filetype=man
+
+  call s:create_toc()
+endfunction
+
+function! s:create_toc() abort
+  let toc = []
+  for lnum in range(1, line('$'))
+    let c = match(getline(lnum), '\S\zs')
+    if c != -1 && synIDattr(synID(lnum, c, 0), 'name') =~? '\%(heading\|title\)$'
+      let text = substitute(getline(lnum), '\s\+', ' ', 'g')
+      call add(toc, {'bufnr': bufnr('%'), 'lnum': lnum, 'text': text})
+    endif
+  endfor
+  call setloclist(0, toc, 'r', 'Man TOC')
 endfunction
 
 function! s:find_man() abort
