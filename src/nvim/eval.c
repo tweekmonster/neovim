@@ -7990,7 +7990,18 @@ static void f_complete(typval_T *argvars, typval_T *rettv, FunPtr fptr)
   if (startcol <= 0)
     return;
 
+  int save_undo_off = undo_off;
+  if (curbuf->b_compl_changedtick != 0
+      && curbuf->b_compl_changedtick == curbuf->b_changedtick) {
+    // Temporarily disable undo since there was no change since the last time
+    // this function was called on this buffer.
+    undo_off = true;
+  }
+
   set_completion(startcol - 1, argvars[1].vval.v_list);
+
+  undo_off = save_undo_off;
+  curbuf->b_compl_changedtick = curbuf->b_changedtick;
 }
 
 /*

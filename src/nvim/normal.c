@@ -1223,6 +1223,7 @@ static void normal_check_text_changed(NormalState *s)
   if (!finish_op && has_event(EVENT_TEXTCHANGED)
       && last_changedtick != curbuf->b_changedtick) {
     if (last_changedtick_buf == curbuf) {
+      curbuf->b_compl_changedtick = curbuf->b_changedtick;
       apply_autocmds(EVENT_TEXTCHANGED, NULL, NULL, false, curbuf);
     }
 
