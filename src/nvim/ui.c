@@ -171,6 +171,11 @@ void ui_refresh(void)
     pum_external &= ui->pum_external;
   }
 
+  if (updating_screen) {
+    loop_schedule(&main_loop, event_create(1, ui_refresh_event, 0));
+    return;
+  }
+
   row = col = 0;
   screen_resize(width, height);
   pum_set_external(pum_external);
